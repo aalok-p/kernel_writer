@@ -1,8 +1,9 @@
 import os
 from dataclasses import dataclass
 from dotenv import load_dotenv
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 import openai
+import re
 
 load_dotenv()
 
@@ -160,5 +161,15 @@ Follow this exact format:
         else:
             raise NotImplementedError()
         
-    
+    def extract_cuda_code(self, llm_response:str)->Tuple[str,Optional[str]]:
+        cuda_pattern =  r"```(?:cuda|c\+\+|cpp)?\n(.*?)```"
+        matches = re.findall(cuda_pattern, llm_response, re.DOTALL)
 
+        if matches:
+            code =matches[0].strip()
+            reasoning_pattern = r"//\s*Optimization strategy:\s*(.+?)(?=\n//|\n\n|$)"
+            reasoning_match = re.search(reasoning_pattern, code, re.DOTALL)
+            reasoning = reasoning_match.group(1).strip() if reasoning_match else None
+
+            return code, reasoning
+        

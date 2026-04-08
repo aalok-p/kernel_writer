@@ -53,28 +53,77 @@ class GPUOptimizer:
         return {'execution_time_ms': 0.0, 'occupancy': 0.0, 'memory_efficiency': 0.0, 'warp_divergence': 0.0,'shared_memory_bytes': 0,'registers_per_thread': 0,}
     
     def optimize(self, input_generator, validator, max_iterations: int=10, target_speedup: float=10.0) ->Tuple[str, float]:
-        print("llm powered kernel optimization")
-        print(f"Model: {self.llm_optimizer.model_name}")
-        print(f"Max iterations: {max_iterations}")
-        print(f"Target speedup: {target_speedup}×\n")
-
-        print("compiling baseline kernel...")
         baseline_success, baseline_ptx, baseline_error = self.compile_kernel(self.baseline_code)
         
         if not baseline_success:
-            print(f"baseline compilation failed: {baseline_error}")
             return self.baseline_code, 1.0
         
-        print("baseline compiled successfully")
-        
-        #pofile baseline
-        inputs =input_generator()
+        #profile baseline
+        inputs = input_generator()
         baseline_metrics = self.profile_kernel(baseline_ptx, inputs)
         self.baseline_time_ms = baseline_metrics.get('execution_time_ms', 1.0)
         
         if self.baseline_time_ms == 0.0:
-            self.baseline_time_ms = 1.0 
+            self.baseline_time_ms = 1.0  
         
-        print(f"Baseline time: {self.baseline_time_ms:.3f}ms\n")
-
+        best_code = self.baseline_code
+        best_speedup = 1.0
+        for iteration in range(max_iterations):
+            optimized_code, reasoning = self.llm_optimizer.propose_optimization(
+                self.baseline_code,
+                current_metrics,
+            )
+            #compile
+            success, ptx_code, error = self.compile_kernel(optimized_code)
+            if not success:
+                # Record failed attempt
+                attempt = OptimizationAttempt(
+                    iteration=iteration,
+                    code=optimized_code,
+                    compilation_success=False,
+                    compilation_error=error,
+                    correctness_passed=False,
+                    execution_time_ms=0.0,
+                    speedup=0.0,
+                    occupancy=0.0,
+                    memory_efficiency=0.0,
+                    reasoning=reasoning,
+                )
+                self.llm_optimizer.add_attempt(attempt)
+                #update metrics for error
+                current_metrics = {
+                    **current_metrics,
+                    'compilation_error': error,
+                }
+                continue
+            metrics = self.profile_kernel(ptx_code, inputs)
+            exec_time = metrics.get('execution_time_ms', 0.0)
+            if exec_time == 0.0:
+                exec_time = self.baseline_time_ms 
+            
+            speedup = self.baseline_time_ms / exec_time
+            # Validate correctness
+            # TODO: Actually run kernel and validate
+            correctness = True  
+            
+            attempt = OptimizationAttempt(
+                iteration=iteration,
+                code=optimized_code,
+                compilation_success=True,
+                compilation_error=None,
+                correctness_passed=correctness,
+                execution_time_ms=exec_time,
+                speedup=speedup,
+                occupancy=metrics.get('occupancy', 0.0),
+                memory_efficiency=metrics.get('memory_efficiency', 0.0),
+                reasoning=reasoning,
+            )
+            self.llm_optimizer.add_attempt(attempt)
+            if correctness and speedup > best_speedup: #update if improve
+                best_speedup = speedup
+                best_code = optimized_code
+                if best_speedup >= target_speedup:
+                    break
+            current_metrics = metrics
         
+        return best_code, best_speedup
