@@ -223,7 +223,8 @@ def optimize_akernel(baseline_code: str, input_generator: Callable, validator: C
         )
         
         # TODO: Compile, profile, validate
-        attempt = OptimizationAttempt(iteration=iteration, code=optimized_code, compilation_success=True,   compilation_error=None,correctness_passed=True,  execution_time_ms=0.0,speedup=1.0,occupancy=0.0,memory_efficiency=0.0,reasoning=reasoning) optimizer.add_attempt(attempt)
+        attempt = OptimizationAttempt(iteration=iteration, code=optimized_code, compilation_success=True,   compilation_error=None,correctness_passed=True,  execution_time_ms=0.0,speedup=1.0,occupancy=0.0,memory_efficiency=0.0,reasoning=reasoning)
+        optimizer.add_attempt(attempt)
     
     best_attempt = optimizer.get_best_attempt()
     if best_attempt:

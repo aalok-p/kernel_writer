@@ -1,0 +1,183 @@
+name: cuda-kernel-optimizer
+version: 1.0.0
+description: |
+  LLM-powered CUDA kernel optimizer that learns in real-time from GPU profiling feedback.
+  Optimizes any CUDA kernel through iterative learning without hardcoded templates.
+
+environment:
+  type: gpu-optimization
+  runtime: python3.11
+  gpu_required: false  # Can run in simulation mode without GPU
+  
+tasks:
+  - id: vector_add_opt
+    name: "Vector Addition Optimization"
+    description: "Optimize a naive vector addition kernel"
+    difficulty: easy
+    max_iterations: 5
+    target_speedup: 2.0
+    
+  - id: matmul_opt
+    name: "Matrix Multiplication Optimization"
+    description: "Optimize matrix multiplication using tiling and shared memory"
+    difficulty: medium
+    max_iterations: 10
+    target_speedup: 5.0
+    
+  - id: attention_opt
+    name: "Attention Kernel Optimization"
+    description: "Optimize transformer attention mechanism for GPU"
+    difficulty: hard
+    max_iterations: 15
+    target_speedup: 3.0
+    
+  - id: reduction_opt
+    name: "Reduction Kernel Optimization"
+    description: "Optimize parallel reduction using warp-level primitives"
+    difficulty: medium
+    max_iterations: 8
+    target_speedup: 4.0
+
+observation_space:
+  type: dict
+  properties:
+    kernel_code:
+      type: string
+      description: "Current CUDA kernel source code"
+    metrics:
+      type: dict
+      properties:
+        execution_time_ms:
+          type: float
+          description: "Kernel execution time in milliseconds"
+        bandwidth_gb_s:
+          type: float
+          description: "Memory bandwidth utilization in GB/s"
+        occupancy:
+          type: float
+          description: "GPU occupancy (0.0-1.0)"
+        speedup:
+          type: float
+          description: "Speedup vs baseline (1.0 = baseline)"
+    iteration:
+      type: integer
+      description: "Current optimization iteration"
+    task_id:
+      type: string
+      description: "Current task identifier"
+
+action_space:
+  type: dict
+  properties:
+    optimized_code:
+      type: string
+      description: "LLM-generated optimized CUDA kernel code"
+    reasoning:
+      type: string
+      description: "LLM explanation of optimization strategy"
+
+reward:
+  type: float
+  range: [0.0, 1.0]
+  description: |
+    Reward based on speedup, correctness, and code quality:
+    - 0.4 * normalized_speedup (capped at target)
+    - 0.4 * correctness (1.0 if correct, 0.0 if wrong)
+    - 0.2 * code_quality (based on occupancy, memory efficiency)
+
+endpoints:
+  - path: /
+    method: GET
+    description: "Health check endpoint"
+    
+  - path: /reset
+    method: POST
+    description: "Reset environment to initial state"
+    request:
+      task_id:
+        type: string
+        required: false
+        description: "Specific task to reset to (random if not provided)"
+    response:
+      observation:
+        type: dict
+        description: "Initial observation after reset"
+      info:
+        type: dict
+        description: "Additional information about the task"
+        
+  - path: /step
+    method: POST
+    description: "Execute one optimization step"
+    request:
+      action:
+        type: dict
+        required: true
+        description: "Action containing optimized_code and reasoning"
+    response:
+      observation:
+        type: dict
+        description: "New observation after step"
+      reward:
+        type: float
+        description: "Reward for this step (0.0-1.0)"
+      done:
+        type: boolean
+        description: "Whether episode is complete"
+      info:
+        type: dict
+        description: "Additional step information"
+        
+  - path: /state
+    method: GET
+    description: "Get current environment state"
+    response:
+      current_task:
+        type: string
+        description: "Current task ID"
+      iteration:
+        type: integer
+        description: "Current iteration number"
+      total_reward:
+        type: float
+        description: "Cumulative reward"
+      metrics:
+        type: dict
+        description: "Current performance metrics"
+
+evaluation:
+  metrics:
+    - name: speedup
+      description: "Performance improvement vs baseline"
+      type: float
+      
+    - name: correctness
+      description: "Functional correctness (0.0 or 1.0)"
+      type: float
+      
+    - name: iterations_to_target
+      description: "Number of iterations to reach target speedup"
+      type: integer
+      
+    - name: final_reward
+      description: "Total episode reward"
+      type: float
+      range: [0.0, 1.0]
+
+grading:
+  method: automated
+  criteria:
+    - Pass all correctness tests (0.4 weight)
+    - Achieve target speedup (0.4 weight)
+    - Code quality and efficiency (0.2 weight)
+  
+baseline:
+  script: inference.py
+  timeout: 1200  # 20 minutes
+  expected_output: structured_logs
+  
+infrastructure:
+  vcpu: 2
+  memory_gb: 8
+  disk_gb: 20
+  timeout_minutes: 20
