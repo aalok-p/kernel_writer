@@ -3,6 +3,7 @@ from llm_optimizer import LLMOptimizer, OptimizationAttempt
 import os
 import tempfile
 import subprocess
+import numpy as np
 
 class GPUOptimizer:
     def __init__(self, baseline_code:str, kernel_name:str, model_provider: str ="lmstudio", model_name:str ="local_model", api_key:Optional[str] =None):
@@ -127,3 +128,31 @@ class GPUOptimizer:
             current_metrics = metrics
         
         return best_code, best_speedup
+    
+def example_usage():
+    #vector add :example
+    baseline = """
+extern "C" __global__ void vector_add(const float* a, const float* b, float* c, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n) {
+        c[idx] = a[idx] + b[idx];
+    }
+}"""
+    def generate_inputs():
+        n=1000000
+        return{
+            'a': np.random.randn(n).astype(np.float32),
+            'b': np.random.randn(n).astype(np.float32),
+            'n': n,
+        }
+    def validate(output, reference):
+        return np.allclose(output, reference, atol=1e-5)
+    
+    optimizer=GPUOptimizer(baseline_code=baseline, kernel_name="vector_add", model_provider="lmstudio", model_name="local-model")
+    best_code, _ = optimizer.optimize(input_generator=generate_inputs, validator=validate, max_iterations=5, target_speedup=4.0)
+
+    return best_code
+
+
+if __name__ == "__main__":
+    example_usage()
