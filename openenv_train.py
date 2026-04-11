@@ -11,8 +11,10 @@ class KernelOptTool:
         self.reward = 0.0
         self.done = False
     
-    def reset(self, **kwargs) ->str|None:
-        task_id =kwargs.get("task_id")
+    def reset(self, **kwargs) -> str:
+        task_id = kwargs.get("task_id")
+        if task_id is None and isinstance(kwargs.get("sample"), dict):
+            task_id = kwargs["sample"].get("task_id")
         result = self.env.reset(task_id=task_id)
         obs = result["observation"]
         self.reward = 0.0
@@ -24,10 +26,12 @@ class KernelOptTool:
             "Use tools to submit improved code."
         )
 
-    def submit_optiization(self, optimized_code:str, strategy:str ="")->str:
+    def submit_optimization(self, optimized_code: str, strategy: str = "", expected_speedup: float | None = None) -> str:
         if self.done:
             raise ValueError("Episode is already done.")
-        result = self.env.step(Action(optimized_code=optimized_code, strategy=strategy))
+        result = self.env.step(
+            Action(optimized_code=optimized_code, strategy=strategy, expected_speedup=expected_speedup)
+        )
         self.reward = result.reward.value
         self.done = result.done
         obs = result.observation
@@ -37,8 +41,12 @@ class KernelOptTool:
             f"pending_checks={obs.pending_checks}, done={result.done}"
         )
 
-def reward_func(environmnets, **kwargs)-> List[float]:
-    return [env.reward for env in environmnets]
+    # Backward-compatible alias
+    def submit_optiization(self, optimized_code: str, strategy: str = "") -> str:
+        return self.submit_optimization(optimized_code=optimized_code, strategy=strategy)
+
+def reward_func(environments, **kwargs) -> List[float]:
+    return [env.reward for env in environments]
 
 def build_dataset(repeats_per_task:int=32)-> Dataset:
     prompts, task_ids = [], []

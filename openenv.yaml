@@ -17,7 +17,7 @@ metadata:
   author: aaloksan
 
 tasks:
-  - id: vector_addition_easy
+  - id: vector_add_easy
     name: "Vector Addition Kernel Optimization"
     difficulty: easy
     objective: "Improve memory throughput while preserving correctness."
@@ -39,7 +39,7 @@ interfaces:
   reset:
     method: POST
     path: /reset
-    returns: initial observation and info
+    returns: initial observation, metadata info
   step:
     method: POST
     path: /step

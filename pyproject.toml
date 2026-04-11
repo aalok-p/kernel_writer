@@ -16,6 +16,7 @@ dependencies = [
   "openenv-core==0.1.1",
   "python-dotenv>=1.0.0",
   "pillow>=10.4.0,<11",
+  "audioop-lts>=0.2.2; python_version >= '3.13'",
   "gradio>=4.44.0",
   "datasets>=2.20.0",
   "trl>=0.12.0"

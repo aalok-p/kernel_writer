@@ -112,8 +112,17 @@ class KernelOptimization_env:
         self.current_task_id =task_id or random.choice(list(TASKS.keys()))
         task= TASKS[self.current_task_id]
         self.state =EnvState(initialized=True, task_id=self.current_task_id, step_count=0, max_steps=task["max_steps"], total_reward=0.0, best_code=task["baseline_code"], best_speedup=1.0, completed_checks=[], action_history=[])
-
-        return {"observation": to_observation(self.current_task_id, self.state).model_dump()}
+        return {
+            "observation": to_observation(self.current_task_id, self.state).model_dump(),
+            "info": {
+                "task_id": self.current_task_id,
+                "task_name": task["name"],
+                "difficulty": task["difficulty"],
+                "max_steps": task["max_steps"],
+                "target_speedup": task["target_speedup"],
+                "checks": task["checks"],
+            },
+        }
     
     def step(self, action:Action) ->StepResult:
         if not self.state.initialized or not self.current_task_id:
@@ -129,7 +138,12 @@ class KernelOptimization_env:
         completed.update(newly_completed)
         self.state.completed_checks = sorted(completed)
 
-        est_speedup = self.current_task_id, completed, compile_ok
+        completion_ratio = len(completed) / max(len(TASKS[self.current_task_id]["checks"]), 1)
+        max_reasonable_speedup = 1.0 + completion_ratio * 3.0
+        if action.expected_speedup is None:
+            est_speedup = round(max_reasonable_speedup, 3)
+        else:
+            est_speedup = round(max(1.0, min(action.expected_speedup, max_reasonable_speedup)), 3)
         if est_speedup > self.state.best_speedup:
             self.state.best_speedup = est_speedup
             self.state.best_code = code
