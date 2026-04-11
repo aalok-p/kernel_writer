@@ -11,3 +11,4 @@ pyyaml>=6.0.0
 python-dotenv
 pillow>=10.4.0,<11
 audioop-lts>=0.2.2; python_version >= "3.13"
+huggingface-hub>=0.30,<1.0
