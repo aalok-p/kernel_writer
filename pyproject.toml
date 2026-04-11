@@ -13,7 +13,7 @@ dependencies = [
   "uvicorn>=0.30.0",
   "pydantic>=2.7.0",
   "openai>=1.0.0",
-  "openenv-core>=0.2.0",
+  "openenv-core==0.1.1",
   "python-dotenv>=1.0.0",
   "pillow>=10.4.0,<11",
   "gradio>=4.44.0",
