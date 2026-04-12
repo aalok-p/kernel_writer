@@ -33,7 +33,7 @@ def ui(task_id:str, kernel_code: str, max_steps:int, openai_api_key:str)-> Itera
         return
 
     model = os.getenv("MODEL_NAME", "llama-3.2-3b")
-    client = OpenAI(api_key=api_key, base_url=os.getenv("API_BASE_URL", "https://api.oxlo.ai/v1"))
+    client = OpenAI(api_key=api_key, base_url=os.getenv("API_BASE_URL", "https://api.openai.com/v1"))
     obs = env.reset(task_id=task_id)["observation"]
     if kernel_code and kernel_code.strip():
         custom_code = kernel_code.strip()

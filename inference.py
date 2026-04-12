@@ -54,7 +54,7 @@ def main()->int:
         print("openai key not set")
 
     model =os.getenv("MODEL_NAME", "gemma-3-4b")
-    client =OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url =os.getenv("API_BASE_URL", "https://api.oxlo.ai/v1"))
+    client =OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url =os.getenv("API_BASE_URL", "https://api.openai.com/v1"))
 
     scores: Dict[str, float] = {}
     try:
